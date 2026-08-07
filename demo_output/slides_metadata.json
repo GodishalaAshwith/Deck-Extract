@@ -1,0 +1,37 @@
+{
+  "total_slides": 3,
+  "video_info": {
+    "filename": "sample_lecture.mp4",
+    "duration_seconds": 15.0,
+    "duration_formatted": "00:00:15",
+    "width": 1280,
+    "height": 720,
+    "fps": 10.0
+  },
+  "slides": [
+    {
+      "index": 1,
+      "timestamp_seconds": 0.0,
+      "timestamp_formatted": "00:00:00",
+      "filename": "slide_001_00-00-00.png",
+      "ssim_score": 0.0,
+      "phash_distance": 64
+    },
+    {
+      "index": 2,
+      "timestamp_seconds": 4.0,
+      "timestamp_formatted": "00:00:04",
+      "filename": "slide_002_00-00-04.png",
+      "ssim_score": 0.6337,
+      "phash_distance": 8
+    },
+    {
+      "index": 3,
+      "timestamp_seconds": 8.0,
+      "timestamp_formatted": "00:00:08",
+      "filename": "slide_003_00-00-08.png",
+      "ssim_score": 0.621,
+      "phash_distance": 6
+    }
+  ]
+}

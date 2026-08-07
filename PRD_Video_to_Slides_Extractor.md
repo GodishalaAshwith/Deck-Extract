@@ -1,0 +1,183 @@
+# Product Requirements Document: Video-to-Slides Extractor
+
+## 1. Overview
+
+### 1.1 Purpose
+Build an application that ingests a video file (e.g., a recorded lecture, webinar, or presentation) and automatically detects slide changes, capturing and saving each unique slide as an image. The extracted slides can optionally be compiled into a downloadable PDF or PPTX file.
+
+### 1.2 Problem Statement
+Recorded presentations often contain valuable slide content that viewers must currently capture manually via screenshots. This is tedious, error-prone, and doesn't scale for long videos. An automated tool should detect slide transitions and extract clean, deduplicated slide images with minimal manual effort.
+
+### 1.3 Goals
+- Automatically detect slide-change events in a video with high precision and recall.
+- Extract a full-resolution image for each unique slide.
+- Avoid duplicate/near-duplicate captures (e.g., cursor movement, minor animation).
+- Provide a lightweight, fast processing pipeline (no unnecessary ML overhead).
+- Deliver results via a simple web UI and/or downloadable app.
+
+### 1.4 Non-Goals (v1)
+- Real-time/live-stream slide extraction (v1 is offline/batch processing of uploaded video files only).
+- Editing or annotating extracted slides within the app.
+- Multi-user collaboration features.
+
+---
+
+## 2. Target Users
+- Students extracting slides from recorded lectures.
+- Professionals archiving webinar/meeting content.
+- Content creators repurposing presentation videos into slide decks or blog posts.
+
+---
+
+## 3. Core Functional Requirements
+
+### 3.1 Video Ingestion
+- **FR-1**: Accept video upload in common formats: MP4, MKV, AVI, MOV, WEBM.
+- **FR-2**: Support file size up to at least 2 GB (configurable limit).
+- **FR-3**: Validate uploaded file is a valid, decodable video before processing; reject and return a clear error otherwise.
+
+### 3.2 Frame Sampling
+- **FR-4**: Extract frames at a configurable sampling rate (default: 1 frame per second) rather than every native frame, to reduce compute cost.
+- **FR-5**: Allow user to adjust sampling rate (trade-off: higher rate = more precise transition timing, more compute).
+
+### 3.3 Slide-Change Detection
+- **FR-6**: Compare each sampled frame against the last saved "reference" slide using a similarity metric (SSIM primary; perceptual hash as fast pre-filter).
+- **FR-7**: If similarity falls below a configurable threshold, mark the frame as a new slide and save it at full resolution.
+- **FR-8**: Provide a configurable threshold/sensitivity setting to reduce false positives (e.g., cursor blink, minor animation) and false negatives (e.g., subtle content change).
+- **FR-9**: Debounce rapid consecutive triggers (e.g., require the new frame's state to persist for at least X consecutive samples before confirming a slide change) to avoid capturing mid-transition/animation frames.
+- **FR-10 (optional v3)**: Support masking/ignoring a defined region of the frame (e.g., a webcam overlay corner or a live timer) so it doesn't trigger false slide-change detections.
+
+### 3.4 Slide Storage & Output
+- **FR-11**: Save each detected slide as a timestamped image file (e.g., `slide_001_00-02-15.png`).
+- **FR-12**: Store metadata per slide: slide index, timestamp (HH:MM:SS), frame number.
+- **FR-13**: Provide a downloadable ZIP of all extracted slide images.
+- **FR-14 (v2)**: Compile extracted slides into a single PDF.
+- **FR-15 (v2)**: Compile extracted slides into a `.pptx` file (one slide image per slide).
+- **FR-16 (v2)**: Run OCR on each slide to extract text, stored alongside the image (for search/filenames/accessibility).
+
+### 3.5 User Interface
+- **FR-17**: Web UI: upload video, configure detection sensitivity/sampling rate, trigger processing, view progress, preview extracted slides in a grid, download results.
+- **FR-18**: Show a processing progress indicator (percentage or current timestamp being processed) since processing is not instantaneous.
+- **FR-19**: Allow the user to manually deselect/delete false-positive slides before final export.
+- **FR-20 (optional)**: Desktop packaging of the same core engine for offline/local use without a server.
+
+---
+
+## 4. Non-Functional Requirements
+
+| Category | Requirement |
+|---|---|
+| Performance | Process a 1-hour 1080p video in well under real-time (target: a few minutes) on commodity hardware (no GPU required). |
+| Lightweight | Core detection must use classical CV (no deep learning models) to keep CPU/memory footprint low and avoid GPU dependency. |
+| Scalability | Backend should process videos as background/async jobs, not block the request thread, to support concurrent uploads. |
+| Reliability | Processing failures (corrupt video, unsupported codec) must fail gracefully with a clear error, not crash the service. |
+| Portability | Core processing logic should be usable both as a CLI tool and behind a web API, so it isn't tightly coupled to one interface. |
+| Storage | Extracted slides and job artifacts should be cleaned up automatically after a configurable retention period. |
+
+---
+
+## 5. Proposed Architecture
+
+```
+[Frontend: Upload UI]
+        |
+        v
+[Backend API: FastAPI]
+        |
+        v
+[Job Queue / Async Task] --> [Video Processing Core]
+                                     |
+                    FFmpeg frame extraction (sampled)
+                                     |
+                    SSIM / pHash diffing engine
+                                     |
+                    Slide save (PNG) + metadata (JSON)
+                                     |
+                    (v2) OCR + PDF/PPTX compiler
+        |
+        v
+[Storage: local disk / object storage]
+        |
+        v
+[Frontend: Poll job status -> preview grid -> download ZIP/PDF/PPTX]
+```
+
+### 5.1 Recommended Tech Stack
+
+**Core processing (language: Python):**
+- `OpenCV` — frame reading, resizing, image ops.
+- `FFmpeg` (via subprocess or `ffmpeg-python`) — efficient video decoding/frame sampling, faster than reading every frame via `VideoCapture` on large files.
+- `scikit-image` (`structural_similarity`) — SSIM-based slide-change detection.
+- `imagehash` — perceptual hashing for fast duplicate pre-filtering.
+- `Pillow` — image saving/format handling.
+- `pytesseract` (v2) — OCR.
+- `python-pptx` (v2) — PPTX compilation.
+
+**Backend:**
+- `FastAPI` — REST API (upload, job status, results).
+- Background task handling via FastAPI `BackgroundTasks` for v1, or a proper task queue (`Celery` + Redis, or `RQ`) once concurrent load matters.
+
+**Frontend:**
+- Simple React (or plain HTML/JS) upload page with a progress view and slide preview grid, calling the FastAPI backend.
+
+**Optional desktop packaging:**
+- `PyQt`/`PySide` wrapping the same core engine for a fully offline downloadable app, or a local FastAPI server + minimal Electron shell if a native web-based UI is preferred.
+
+**Why not deep learning for detection?**
+Slide-change detection is a classical image-diffing problem; a CNN/detector adds latency and resource cost with no meaningful accuracy gain over SSIM + pHash for this task. Reserve ML only for an optional future "slide vs. non-slide" classifier if input videos mix slide content with unrelated footage (e.g., webcam-only segments).
+
+---
+
+## 6. Processing Pipeline Detail (for implementation)
+
+1. Accept uploaded video, store to temp/working directory.
+2. Extract 1 frame/sec (configurable) via FFmpeg into a working folder or in-memory stream.
+3. Downscale each sampled frame (e.g., to 320x180) for cheap comparison.
+4. Compute perceptual hash of the downscaled frame; compare Hamming distance to last saved slide's hash as a cheap first-pass filter.
+5. If hash distance exceeds a low threshold, compute SSIM between the downscaled current frame and the last saved slide for a more precise decision.
+6. If SSIM falls below the configured similarity threshold, mark as a candidate slide change.
+7. Debounce: confirm the candidate persists for N consecutive samples (to skip mid-animation/transition frames).
+8. On confirmation, save the corresponding full-resolution frame as the new slide image; update the "last saved slide" reference.
+9. Record metadata (index, timestamp, frame number) per saved slide.
+10. After processing completes, generate the ZIP (and PDF/PPTX/OCR text in v2).
+11. Update job status to "complete" with links to output artifacts.
+
+---
+
+## 7. Configuration Parameters (exposed to user or set as sane defaults)
+
+| Parameter | Default | Description |
+|---|---|---|
+| Sampling rate | 1 fps | How often frames are pulled from the video for comparison |
+| SSIM threshold | 0.90 | Similarity below which a frame is considered a new slide |
+| pHash pre-filter threshold | tuned constant | Fast filter before running SSIM |
+| Debounce count | 2 samples | Consecutive samples required to confirm a slide change |
+| Output format | PNG | Image format for saved slides |
+| Ignore region (optional) | none | Coordinates of a region to exclude from comparison (e.g., webcam overlay) |
+
+---
+
+## 8. Milestones / Phased Scope
+
+**v1 (MVP)**
+- Video upload, FFmpeg-based sampling, SSIM-based detection, PNG slide export, ZIP download, basic web UI with progress and preview grid.
+
+**v2**
+- OCR per slide, PDF export, PPTX export, manual slide deselection before export.
+
+**v3**
+- Ignore-region masking (webcam overlay exclusion), adjustable sensitivity presets, desktop app packaging.
+
+---
+
+## 9. Success Metrics
+- Detection precision/recall on a labeled test set of lecture/presentation videos (target: >90% of true slide changes captured, <10% false-positive duplicate rate).
+- Processing time per minute of video (target benchmark to be set after v1 profiling).
+- User-reported reduction in manual screenshot effort (qualitative, post-launch feedback).
+
+---
+
+## 10. Open Questions
+- Should the tool support batch processing of multiple videos in one job?
+- Should there be a hosted/cloud version with storage limits, or is this intended purely as a self-hosted/local tool?
+- What is the expected typical video length and resolution range for the primary use case (affects sampling-rate defaults and storage planning)?

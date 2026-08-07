@@ -1,0 +1,2 @@
+[console_scripts]
+video-to-ppt = video_to_ppt.cli:main
