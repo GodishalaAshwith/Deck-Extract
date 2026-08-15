@@ -1,0 +1,2 @@
+- sometimes when you go back to slides it extracts them again 
+- When there are slides which add a line at the bottom it dosent extract it 
