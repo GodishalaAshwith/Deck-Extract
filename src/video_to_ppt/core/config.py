@@ -29,15 +29,16 @@ class IgnoreRegion:
 class ExtractionConfig:
     """Frame extraction configuration."""
     sampling_fps: float = 1.0
-    compare_width: int = 320
-    compare_height: int = 180
+    compare_width: int = 640
+    compare_height: int = 360
     use_ffmpeg: bool = True
 
 
 @dataclass
 class DetectionConfig:
     """Slide change detection configuration."""
-    ssim_threshold: float = 0.90
+    ssim_threshold: float = 0.95
+    build_up_threshold: float = 0.85
     phash_threshold: int = 6
     debounce_samples: int = 2
     ignore_regions: List[IgnoreRegion] = field(default_factory=list)
