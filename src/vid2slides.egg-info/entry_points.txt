@@ -1,0 +1,2 @@
+[console_scripts]
+vid2slides = video_to_ppt.cli:main

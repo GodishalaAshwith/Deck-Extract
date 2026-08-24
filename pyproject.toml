@@ -3,25 +3,31 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "video-to-ppt"
-version = "0.1.0"
+name = "deck-extract"
+version = "0.1.1"
 description = "Extract unique slides from video presentations into PNG, PDF, PPTX, and ZIP."
-readme = "PRD_Video_to_Slides_Extractor.md"
+readme = "PYPI_README.md"
 requires-python = ">=3.9"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
-    "opencv-python>=4.8.0",
-    "scikit-image>=0.21.0",
-    "imagehash>=4.3.0",
+    "opencv-python>=4.8.0,<5.0.0",
+    "scikit-image>=0.21.0,<1.0.0",
+    "imagehash>=4.3.0,<5.0.0",
     "Pillow>=10.0.0",
     "python-pptx>=0.6.21",
-    "imageio-ffmpeg>=0.4.9",
+    "imageio-ffmpeg>=0.4.9,<1.0.0",
     "rich>=13.0.0",
-    "numpy>=1.24.0",
-    "scipy>=1.11.0",
+    "numpy>=1.24.0,<3.0.0",
+    "scipy>=1.11.0,<2.0.0",
 ]
 
 [project.scripts]
-video-to-ppt = "video_to_ppt.cli:main"
+deck-extract = "video_to_ppt.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

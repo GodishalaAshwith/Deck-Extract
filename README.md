@@ -1,11 +1,12 @@
-# Video-to-Slides Extractor
+# deck-extract (Video-to-Slides Extractor)
 
 A lightweight command-line tool that automatically detects slide changes in recorded videos (e.g., lectures, webinars) and extracts each unique slide as a high-quality image. The extracted slides can also be exported to PDF, PPTX, and ZIP formats.
 
 ## Features
 - Fast video frame extraction (using FFmpeg by default).
 - Accurate slide transition detection using SSIM (Structural Similarity) and Perceptual Hashing (pHash).
-- Automatic deduplication of identical or near-identical slides.
+- Incremental Build-Up Merging to combine bullet point additions into single slides.
+- Automatic deduplication of identical or near-identical slides (even when navigating backwards).
 - Export to multiple formats: PNG, PDF, PowerPoint (PPTX), and ZIP archives.
 - Configurable settings for frame sampling rate, detection sensitivity, and ignoring specific video regions (e.g., webcam overlays).
 
@@ -45,12 +46,12 @@ A lightweight command-line tool that automatically detects slide changes in reco
 
 ## Usage
 
-You can run the tool via the installed CLI command `video-to-ppt` or by directly running `main.py`.
+You can run the tool via the installed CLI command `deck-extract` or by directly running `main.py`.
 
 ### Basic Usage
 
 ```bash
-video-to-ppt path/to/your/video.mp4
+deck-extract path/to/your/video.mp4
 ```
 Or:
 ```bash
@@ -62,7 +63,7 @@ This will process `video.mp4` and save the extracted slides (PNGs, PDF, PPTX, an
 ### Advanced Usage
 
 ```bash
-video-to-ppt input_video.mp4 -o custom_output_dir/ -f 2.0 -t 0.85
+deck-extract input_video.mp4 -o custom_output_dir/ -f 2.0 -t 0.85
 ```
 
 ### Common Options
@@ -82,5 +83,5 @@ video-to-ppt input_video.mp4 -o custom_output_dir/ -f 2.0 -t 0.85
 
 For a full list of options, run:
 ```bash
-video-to-ppt --help
+deck-extract --help
 ```
