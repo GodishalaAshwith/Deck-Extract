@@ -1,8 +1,13 @@
 """Configuration dataclasses for Video-to-Slides Extractor."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Tuple
+
+class ProcessingMode(Enum):
+    LIGHTWEIGHT = "lightweight"
+    NORMAL = "normal"
 
 
 @dataclass
@@ -37,6 +42,7 @@ class ExtractionConfig:
 @dataclass
 class DetectionConfig:
     """Slide change detection configuration."""
+    mode: ProcessingMode = ProcessingMode.NORMAL
     ssim_threshold: float = 0.95
     build_up_threshold: float = 0.85
     phash_threshold: int = 6

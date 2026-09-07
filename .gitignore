@@ -3,3 +3,13 @@ __pycache__/
 output
 input
 .env
+
+# Build and packaging
+build/
+dist/
+*.spec
+*.egg-info/
+
+# Testing and local outputs
+Testing-Outputs/
+graphify-out/

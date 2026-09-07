@@ -85,6 +85,16 @@ class SlideDetector:
 
     def _compute_similarity(self, img1_bgr: np.ndarray, img2_bgr: np.ndarray) -> float:
         """Compute structural similarity across color channels."""
+        from .config import ProcessingMode
+        if self.det_config.mode == ProcessingMode.LIGHTWEIGHT:
+            # Fast Mean Squared Error instead of SSIM
+            # Convert to float to avoid overflow
+            mse = np.mean((img1_bgr.astype(np.float32) - img2_bgr.astype(np.float32)) ** 2)
+            # Map MSE to a 0.0 - 1.0 score where 1.0 is identical.
+            # An MSE of 0 -> 1.0. An MSE of ~1000 or more is quite different.
+            similarity = max(0.0, 1.0 - (mse / 2000.0))
+            return float(similarity)
+
         return float(
             ssim(
                 img1_bgr,

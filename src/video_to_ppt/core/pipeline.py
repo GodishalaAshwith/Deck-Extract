@@ -36,6 +36,13 @@ class SlideExtractionPipeline:
         self.detection_config = detection_config or DetectionConfig()
         self.export_config = export_config or ExportConfig()
 
+        from .config import ProcessingMode
+        if self.detection_config.mode == ProcessingMode.LIGHTWEIGHT:
+            # Force lower FPS and disable heavy exports in lightweight mode
+            self.extraction_config.sampling_fps = min(0.5, self.extraction_config.sampling_fps)
+            self.export_config.save_pdf = False
+            self.export_config.save_pptx = False
+
         self._cancelled = False
 
     def cancel(self):

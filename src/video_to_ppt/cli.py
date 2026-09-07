@@ -268,6 +268,11 @@ def run_cli(args: argparse.Namespace) -> int:
 
 def main():
     """Main CLI entrypoint."""
+    if len(sys.argv) == 1:
+        from .gui import launch_gui
+        launch_gui()
+        sys.exit(0)
+        
     parser = build_parser()
     args = parser.parse_args()
     sys.exit(run_cli(args))

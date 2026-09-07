@@ -177,11 +177,16 @@ class VideoFrameExtractor:
             "-"
         ]
 
+        kwargs = {}
+        if os.name == 'nt':
+            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            bufsize=10**7
+            bufsize=10**7,
+            **kwargs
         )
 
         sample_idx = 0

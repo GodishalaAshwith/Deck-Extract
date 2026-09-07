@@ -1,2 +1,0 @@
-[console_scripts]
-deck-extract = video_to_ppt.cli:main
