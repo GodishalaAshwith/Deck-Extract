@@ -27,6 +27,8 @@ class DeckExtractApp(ctk.CTk):
         
         self.title("deck-extract")
         self.geometry("700x750")
+        self.minsize(700, 750)
+        self.resizable(True, True)
         self.configure(fg_color=BG_COLOR)
         
         # Setup window icon
@@ -94,7 +96,7 @@ class DeckExtractApp(ctk.CTk):
         # File Selection
         self.video_path_var = ctk.StringVar()
         self.video_btn = ctk.CTkButton(
-            self.card_frame, text="Select Video Presentation", 
+            self.card_frame, text="🎬 Select Video Presentation", 
             command=self._browse_video, 
             fg_color=BG_COLOR, hover_color="#3a3a3c",
             text_color=TEXT_COLOR, font=ctk.CTkFont(family="SF Pro Text", size=14, weight="bold"),
@@ -113,7 +115,7 @@ class DeckExtractApp(ctk.CTk):
         # Output Dir
         self.output_dir_var = ctk.StringVar(value="./output")
         self.out_btn = ctk.CTkButton(
-            self.card_frame, text="Set Output Directory", 
+            self.card_frame, text="📁 Set Output Directory", 
             command=self._browse_output, 
             fg_color=BG_COLOR, hover_color="#3a3a3c",
             text_color=TEXT_COLOR, font=ctk.CTkFont(family="SF Pro Text", size=14, weight="bold"),
@@ -130,14 +132,26 @@ class DeckExtractApp(ctk.CTk):
         self.out_label.pack(padx=30, pady=(0, 25))
 
         # Action Button
+        self.action_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.action_frame.pack(padx=40, pady=25, fill="x")
+
         self.run_btn = ctk.CTkButton(
-            self, text="Start Extraction", 
+            self.action_frame, text="Start Extraction", 
             command=self._toggle_extraction,
             font=ctk.CTkFont(family="SF Pro Text", size=16, weight="bold"),
             height=50, corner_radius=12,
             fg_color=ACCENT_COLOR, hover_color=HOVER_COLOR, text_color="#ffffff"
         )
-        self.run_btn.pack(padx=40, pady=25, fill="x")
+        self.run_btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+
+        self.open_out_btn = ctk.CTkButton(
+            self.action_frame, text="📂 Open Output", 
+            command=self._open_output_folder, state="disabled",
+            font=ctk.CTkFont(family="SF Pro Text", size=16, weight="bold"),
+            height=50, corner_radius=12, width=150,
+            fg_color=FRAME_COLOR, text_color=SECONDARY_TEXT
+        )
+        self.open_out_btn.pack(side="right")
         
         # Progress & Status
         self.progress_bar = ctk.CTkProgressBar(self, progress_color=ACCENT_COLOR, fg_color=FRAME_COLOR, height=6)
@@ -190,6 +204,18 @@ class DeckExtractApp(ctk.CTk):
             self.log_box.see("end")
         self.after(0, append)
 
+    def _open_output_folder(self):
+        import os, subprocess, platform
+        out_path = getattr(self, "last_output_dir", None)
+        if not out_path or not os.path.exists(out_path):
+            return
+        if platform.system() == "Windows":
+            os.startfile(out_path)
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", out_path])
+        else:
+            subprocess.Popen(["xdg-open", out_path])
+
     def _update_progress(self, progress: PipelineProgress):
         def update():
             self.progress_bar.set(progress.progress_pct / 100.0)
@@ -238,15 +264,18 @@ class DeckExtractApp(ctk.CTk):
             self._log(f"\n--- SUCCESS ---")
             self._log(f"Extracted {len(slides)} slides in {elapsed:.1f} seconds.")
             self._log(f"Output saved to: {export_res.output_dir}")
+            self.last_output_dir = str(export_res.output_dir)
+            self._set_ui_state("normal", success=True)
+            return
         except Exception as e:
             if str(e) == "Pipeline cancelled":
                 self._log("\nExtraction cancelled by user.")
             else:
                 self._log(f"\nERROR: {str(e)}")
                 
-        self._set_ui_state("normal")
+        self._set_ui_state("normal", success=False)
 
-    def _set_ui_state(self, state: str):
+    def _set_ui_state(self, state: str, success: bool = False):
         def update():
             self.is_running = (state == "disabled")
             new_state = "disabled" if self.is_running else "normal"
@@ -255,12 +284,18 @@ class DeckExtractApp(ctk.CTk):
             self.out_btn.configure(state=new_state)
             self.mode_selector.configure(state=new_state)
             
+            
             if self.is_running:
                 self.run_btn.configure(text="Stop", fg_color="#ff3b30", hover_color="#d70015")
+                self.open_out_btn.configure(state="disabled", fg_color=FRAME_COLOR, text_color=SECONDARY_TEXT, hover_color=FRAME_COLOR)
             else:
                 self.run_btn.configure(text="Start Extraction", fg_color=ACCENT_COLOR, hover_color=HOVER_COLOR)
-                self.progress_bar.set(0)
-                self.status_label.configure(text="Ready")
+                if success:
+                    self.open_out_btn.configure(state="normal", fg_color="#34c759", hover_color="#30d158", text_color="#ffffff")
+                else:
+                    self.progress_bar.set(0)
+                    self.status_label.configure(text="Ready")
+                    self.open_out_btn.configure(state="disabled", fg_color=FRAME_COLOR, text_color=SECONDARY_TEXT, hover_color=FRAME_COLOR)
         self.after(0, update)
 
     def _toggle_extraction(self):
